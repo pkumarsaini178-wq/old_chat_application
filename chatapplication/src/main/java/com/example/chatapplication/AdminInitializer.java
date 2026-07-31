@@ -36,7 +36,6 @@ public class AdminInitializer implements CommandLineRunner {
     public void run(String... args) throws Exception {
         createOrUpdateAdmin(admin1Email, admin1Password, "java71932");
         createOrUpdateAdmin(admin2Email, admin2Password, "pkumarsaini178");
-        createOrUpdateAdmin("pumarsaini178@gmail.com", admin2Password, "pumarsaini178");
     }
 
     private void createOrUpdateAdmin(String email, String rawPassword, String defaultUsername) {

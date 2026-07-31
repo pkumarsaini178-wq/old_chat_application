@@ -41,6 +41,9 @@ public class ChatController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @org.springframework.beans.factory.annotation.Value("${admin.emails:}")
+    private String adminEmails;
+
     @GetMapping("/")
     public RedirectView redi(HttpServletRequest request) {
         String token = null;
@@ -605,12 +608,11 @@ public class ChatController {
     private boolean isAdminEmail(String email) {
         if (email == null || email.trim().isEmpty()) return false;
         String cleanEmail = email.trim().toLowerCase();
-        String envAdminEmail = System.getenv("ADMIN_EMAIL");
-        if ("java71932@gmail.com".equals(cleanEmail) || "pkumarsaini178@gmail.com".equals(cleanEmail) || "pumarsaini178@gmail.com".equals(cleanEmail)) {
-            return true;
-        }
-        if (envAdminEmail != null && envAdminEmail.trim().equalsIgnoreCase(cleanEmail)) {
-            return true;
+        if (adminEmails == null || adminEmails.trim().isEmpty()) return false;
+        for (String adminEmail : adminEmails.split(",")) {
+            if (adminEmail.trim().toLowerCase().equals(cleanEmail)) {
+                return true;
+            }
         }
         return false;
     }

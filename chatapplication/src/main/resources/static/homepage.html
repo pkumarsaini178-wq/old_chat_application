@@ -2353,7 +2353,7 @@
             users.forEach(user => {
                 let email = user.useremail || '';
                 let username = user.username || 'No Name';
-                let role = user.role || (email === 'java71932@gmail.com' || email === 'pkumarsaini178@gmail.com' ? 'ADMIN' : 'USER');
+                let role = user.role || 'USER';
                 let isBlocked = Boolean(user.isBlocked);
                 let blockExpiry = user.blockExpiry;
 
@@ -2363,7 +2363,7 @@
                     activeCount++;
                 }
 
-                let isSelfOrAdmin = (email === 'java71932@gmail.com' || email === 'pkumarsaini178@gmail.com' || role === 'ADMIN');
+                let isSelfOrAdmin = (role === 'ADMIN');
 
                 let statusText = isBlocked ? 'Blocked' : 'Active';
                 let statusClass = isBlocked ? 'blocked' : 'active';

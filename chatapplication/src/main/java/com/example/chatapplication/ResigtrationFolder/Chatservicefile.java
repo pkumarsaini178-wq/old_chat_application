@@ -34,6 +34,21 @@ public class Chatservicefile {
     @Autowired
     private com.example.chatapplication.MediaService mediaService;
 
+    @org.springframework.beans.factory.annotation.Value("${admin.emails:}")
+    private String adminEmails;
+
+    private boolean isAdminEmail(String email) {
+        if (email == null || email.trim().isEmpty()) return false;
+        String cleanEmail = email.toLowerCase().trim();
+        if (adminEmails == null || adminEmails.trim().isEmpty()) return false;
+        for (String adminEmail : adminEmails.split(",")) {
+            if (adminEmail.trim().equalsIgnoreCase(cleanEmail)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public List<ChatEntity> getAllMessages() {
         return chatRepository.findAll();
     }
@@ -43,12 +58,8 @@ public class Chatservicefile {
     }
 
     public ChatSingin registerUser(ChatSingin user) {
-        if (user.getUseremail() != null) {
-            String email = user.getUseremail().toLowerCase().trim();
-            String envAdminEmail = System.getenv("ADMIN_EMAIL");
-            if ("java71932@gmail.com".equals(email) || "pkumarsaini178@gmail.com".equals(email) || (envAdminEmail != null && envAdminEmail.equalsIgnoreCase(email))) {
-                user.setRole("ADMIN");
-            }
+        if (isAdminEmail(user.getUseremail())) {
+            user.setRole("ADMIN");
         }
         return chatSinginRepo.save(user);
     }

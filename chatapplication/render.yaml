@@ -23,4 +23,14 @@ services:
         sync: false
       - key: TZ
         value: Asia/Kolkata
+      - key: ADMIN_USER1_EMAIL
+        sync: false
+      - key: ADMIN_USER1_PASSWORD
+        sync: false
+      - key: ADMIN_USER2_EMAIL
+        sync: false
+      - key: ADMIN_USER2_PASSWORD
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
 
