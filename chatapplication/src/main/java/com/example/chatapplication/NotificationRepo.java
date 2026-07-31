@@ -9,4 +9,5 @@ import java.util.List;
 public interface NotificationRepo extends JpaRepository<Notification, Long> {
     List<Notification> findByReceiverEmailAndStatus(String receiverEmail, String status);
     boolean existsBySenderEmailAndReceiverEmailAndStatus(String senderEmail, String receiverEmail, String status);
+    void deleteBySenderEmailOrReceiverEmail(String senderEmail, String receiverEmail);
 }

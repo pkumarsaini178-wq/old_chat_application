@@ -16,5 +16,7 @@ public class ChatSingin {
     private String password;
     private String currentpassword;
     private String useremail;
-
+    private Boolean isBlocked = false;
+    private java.time.LocalDateTime blockExpiry;
+    private String role = "USER";
 }

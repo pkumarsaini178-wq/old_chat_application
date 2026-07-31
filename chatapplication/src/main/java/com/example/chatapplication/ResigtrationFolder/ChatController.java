@@ -30,6 +30,9 @@ public class ChatController {
     private JwtUntil jwtUntil;
 
     @Autowired
+    private com.example.chatapplication.TokenBlacklistService tokenBlacklistService;
+
+    @Autowired
     private EmailService emailService;
 
     @Autowired
@@ -63,29 +66,35 @@ public class ChatController {
     public RedirectView loginString(@RequestParam String user_name, @RequestParam String passowrd,
             HttpServletResponse response) {
         if (user_name != null && passowrd != null) {
-            ChatSingin chatuser = chatService.loginUser(user_name, passowrd);
-            if (chatuser != null) {
-                // Generate JWT token based on user email (or username as fallback)
-                String emailForToken = chatuser.getUseremail();
-                if (emailForToken == null || emailForToken.isEmpty()) {
-                    emailForToken = chatuser.getUsername();
+            try {
+                ChatSingin chatuser = chatService.loginUser(user_name, passowrd);
+                if (chatuser != null) {
+                    // Generate JWT token based on user email (or username as fallback)
+                    String emailForToken = chatuser.getUseremail();
+                    if (emailForToken == null || emailForToken.isEmpty()) {
+                        emailForToken = chatuser.getUsername();
+                    }
+                    String token = jwtUntil.gunrateToken(emailForToken);
+
+                    // Create cookie to store the JWT token for 1 week
+                    Cookie cookie = new Cookie("jwt", token);
+                    cookie.setHttpOnly(true); // secure against XSS
+                    cookie.setSecure(true);   // only sent over HTTPS
+                    cookie.setPath("/");      // available across the entire application
+                    cookie.setMaxAge(7 * 24 * 60 * 60); // 1 week expiry in seconds
+                    // Set SameSite=None via Set-Cookie header for cross-origin support
+                    String setCookieHeader = cookie.getName() + "=" + cookie.getValue()
+                            + "; Path=" + cookie.getPath()
+                            + "; Max-Age=" + cookie.getMaxAge()
+                            + "; HttpOnly; Secure; SameSite=None";
+                    response.addHeader("Set-Cookie", setCookieHeader);
+
+                    return new RedirectView("/homepage.html");
                 }
-                String token = jwtUntil.gunrateToken(emailForToken);
-
-                // Create cookie to store the JWT token for 1 week
-                Cookie cookie = new Cookie("jwt", token);
-                cookie.setHttpOnly(true); // secure against XSS
-                cookie.setSecure(true);   // only sent over HTTPS
-                cookie.setPath("/");      // available across the entire application
-                cookie.setMaxAge(7 * 24 * 60 * 60); // 1 week expiry in seconds
-                // Set SameSite=None via Set-Cookie header for cross-origin support
-                String setCookieHeader = cookie.getName() + "=" + cookie.getValue()
-                        + "; Path=" + cookie.getPath()
-                        + "; Max-Age=" + cookie.getMaxAge()
-                        + "; HttpOnly; Secure; SameSite=None";
-                response.addHeader("Set-Cookie", setCookieHeader);
-
-                return new RedirectView("/homepage.html");
+            } catch (RuntimeException e) {
+                if ("ACCOUNT_BLOCKED".equals(e.getMessage())) {
+                    return new RedirectView("/login.html?error=" + "Your account has been blocked by the admin.");
+                }
             }
         }
         return new RedirectView("/login.html?error=" + "Username or password is not valid");
@@ -465,7 +474,30 @@ public class ChatController {
     }
 
     @PostMapping("/logout")
-    public org.springframework.http.ResponseEntity<Void> logoutUser(HttpServletResponse response) {
+    public org.springframework.http.ResponseEntity<Void> logoutUser(HttpServletRequest request, HttpServletResponse response) {
+        // Blacklist the active JWT token on logout
+        try {
+            String token = null;
+            Cookie[] cookies = request.getCookies();
+            if (cookies != null) {
+                for (Cookie cookie : cookies) {
+                    if ("jwt".equals(cookie.getName())) {
+                        token = cookie.getValue();
+                        break;
+                    }
+                }
+            }
+            if (token != null && jwtUntil.Token_is_vailid(token)) {
+                java.util.Date expDate = jwtUntil.getTokenExpiration(token);
+                java.time.LocalDateTime expiry = expDate.toInstant()
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalDateTime();
+                tokenBlacklistService.blacklistToken(token, expiry);
+            }
+        } catch (Exception e) {
+            // Ignore token blacklisting errors during logout
+        }
+
         // Mark user offline before clearing cookie
         try {
             String userEmail = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
@@ -567,6 +599,145 @@ public class ChatController {
             }
         } catch (Exception e) {
             return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR).body("Error");
+        }
+    }
+
+    private boolean isAdminEmail(String email) {
+        if (email == null || email.trim().isEmpty()) return false;
+        String cleanEmail = email.trim().toLowerCase();
+        String envAdminEmail = System.getenv("ADMIN_EMAIL");
+        if ("java71932@gmail.com".equals(cleanEmail) || "pkumarsaini178@gmail.com".equals(cleanEmail) || "pumarsaini178@gmail.com".equals(cleanEmail)) {
+            return true;
+        }
+        if (envAdminEmail != null && envAdminEmail.trim().equalsIgnoreCase(cleanEmail)) {
+            return true;
+        }
+        return false;
+    }
+
+    @GetMapping("/api/admin/check")
+    @ResponseBody
+    public java.util.Map<String, Object> checkAdminStatus() {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        java.util.Map<String, Object> map = new java.util.HashMap<>();
+        String email = (auth != null && auth.getName() != null) ? auth.getName() : "";
+        boolean isAdmin = isAdminEmail(email);
+        map.put("isAdmin", isAdmin);
+        map.put("email", email);
+        return map;
+    }
+
+    @GetMapping("/api/admin/users")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<?> getAllUsersForAdmin() {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String currentUser = (auth != null && auth.getName() != null) ? auth.getName() : "";
+        if (!isAdminEmail(currentUser)) {
+            java.util.Map<String, String> res = new java.util.HashMap<>();
+            res.put("status", "ERROR");
+            res.put("message", "Unauthorized. Only admins can access this.");
+            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).body(res);
+        }
+        List<ChatSingin> users = chatService.getAllUsers();
+        for (ChatSingin user : users) {
+            user.setPassword(null);
+            user.setCurrentpassword(null);
+            if (isAdminEmail(user.getUseremail())) {
+                user.setRole("ADMIN");
+            } else if (user.getRole() == null) {
+                user.setRole("USER");
+            }
+        }
+        return org.springframework.http.ResponseEntity.ok(users);
+    }
+
+    @PostMapping("/api/admin/block-user")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<java.util.Map<String, String>> blockUserByAdmin(
+            @RequestParam String email,
+            @RequestParam(defaultValue = "365") int days) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String currentUser = (auth != null && auth.getName() != null) ? auth.getName() : "";
+        java.util.Map<String, String> response = new java.util.HashMap<>();
+
+        if (!isAdminEmail(currentUser)) {
+            response.put("status", "ERROR");
+            response.put("message", "Unauthorized access.");
+            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).body(response);
+        }
+
+        if (isAdminEmail(email)) {
+            response.put("status", "ERROR");
+            response.put("message", "Cannot block an admin account.");
+            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.BAD_REQUEST).body(response);
+        }
+
+        boolean success = chatService.blockUserByEmail(email, days);
+        if (success) {
+            response.put("status", "SUCCESS");
+            response.put("message", "User " + email + " has been blocked for 1 year.");
+            return org.springframework.http.ResponseEntity.ok(response);
+        } else {
+            response.put("status", "ERROR");
+            response.put("message", "User not found.");
+            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.NOT_FOUND).body(response);
+        }
+    }
+
+    @PostMapping("/api/admin/unblock-user")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<java.util.Map<String, String>> unblockUserByAdmin(@RequestParam String email) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String currentUser = (auth != null && auth.getName() != null) ? auth.getName() : "";
+        java.util.Map<String, String> response = new java.util.HashMap<>();
+
+        if (!isAdminEmail(currentUser)) {
+            response.put("status", "ERROR");
+            response.put("message", "Unauthorized access.");
+            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).body(response);
+        }
+
+        boolean success = chatService.unblockUserByEmail(email);
+        if (success) {
+            response.put("status", "SUCCESS");
+            response.put("message", "User " + email + " was successfully unblocked.");
+            return org.springframework.http.ResponseEntity.ok(response);
+        } else {
+            response.put("status", "ERROR");
+            response.put("message", "User not found.");
+            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.NOT_FOUND).body(response);
+        }
+    }
+
+    @PostMapping("/api/admin/delete-user")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<java.util.Map<String, String>> deleteUserByAdmin(@RequestParam String email) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String currentUser = (auth != null && auth.getName() != null) ? auth.getName() : "";
+        
+        java.util.Map<String, String> response = new java.util.HashMap<>();
+        
+        if (!isAdminEmail(currentUser)) {
+            response.put("status", "ERROR");
+            response.put("message", "Unauthorized access.");
+            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).body(response);
+        }
+        
+        if (isAdminEmail(email)) {
+            response.put("status", "ERROR");
+            response.put("message", "Cannot delete an admin account.");
+            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.BAD_REQUEST).body(response);
+        }
+        
+        boolean success = chatService.deleteUserByEmail(email);
+        if (success) {
+            response.put("status", "SUCCESS");
+            response.put("message", "User " + email + " account was permanently deleted.");
+            return org.springframework.http.ResponseEntity.ok(response);
+        } else {
+            response.put("status", "ERROR");
+            response.put("message", "User not found.");
+            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.NOT_FOUND).body(response);
         }
     }
 }

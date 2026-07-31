@@ -43,13 +43,33 @@ public class Chatservicefile {
     }
 
     public ChatSingin registerUser(ChatSingin user) {
+        if (user.getUseremail() != null) {
+            String email = user.getUseremail().toLowerCase().trim();
+            String envAdminEmail = System.getenv("ADMIN_EMAIL");
+            if ("java71932@gmail.com".equals(email) || "pkumarsaini178@gmail.com".equals(email) || (envAdminEmail != null && envAdminEmail.equalsIgnoreCase(email))) {
+                user.setRole("ADMIN");
+            }
+        }
         return chatSinginRepo.save(user);
     }
 
-    public ChatSingin loginUser(String useremail, String password) {
-        Optional<ChatSingin> user = chatSinginRepo.findByuseremail(useremail);
+    public ChatSingin loginUser(String usernameOrEmail, String password) {
+        Optional<ChatSingin> user = chatSinginRepo.findByuseremail(usernameOrEmail);
+        if (!user.isPresent()) {
+            user = chatSinginRepo.findByusername(usernameOrEmail);
+        }
         if (user.isPresent() && passwordEncoder.matches(password, user.get().getPassword())) {
-            return user.get();
+            ChatSingin u = user.get();
+            if (Boolean.TRUE.equals(u.getIsBlocked())) {
+                if (u.getBlockExpiry() != null && java.time.LocalDateTime.now().isAfter(u.getBlockExpiry())) {
+                    u.setIsBlocked(false);
+                    u.setBlockExpiry(null);
+                    chatSinginRepo.save(u);
+                } else {
+                    throw new RuntimeException("ACCOUNT_BLOCKED");
+                }
+            }
+            return u;
         }
         return null;
     }
@@ -545,5 +565,82 @@ public class Chatservicefile {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Transactional
+    public boolean deleteUserByEmail(String email) {
+        Optional<ChatSingin> userOpt = chatSinginRepo.findByuseremail(email);
+        if (!userOpt.isPresent()) {
+            return false;
+        }
+
+        // 1. Delete user status
+        userStatusRepo.deleteById(email);
+
+        // 2. Delete clear statuses and messages for all user's connections
+        List<com.example.chatapplication.ChatConnection> connections = chatConnectionRepo.findByUser1EmailOrUser2Email(email, email);
+        for (com.example.chatapplication.ChatConnection conn : connections) {
+            chatRepository.deleteByConnectionId(conn.getId());
+            chatClearStatusRepo.deleteByConnectionId(conn.getId());
+            chatConnectionRepo.delete(conn);
+        }
+
+        // 3. Delete any remaining clear statuses for userEmail
+        chatClearStatusRepo.deleteByUserEmail(email);
+
+        // 4. Delete notifications
+        notificationRepo.deleteBySenderEmailOrReceiverEmail(email, email);
+
+        // 5. Delete any messages sent directly by the user
+        chatRepository.deleteBySender(email);
+
+        // 6. Delete user
+        chatSinginRepo.delete(userOpt.get());
+
+        return true;
+    }
+
+    @Transactional
+    public boolean blockUserByEmail(String email, int days) {
+        Optional<ChatSingin> userOpt = chatSinginRepo.findByuseremail(email);
+        if (!userOpt.isPresent()) {
+            return false;
+        }
+        ChatSingin user = userOpt.get();
+        user.setIsBlocked(true);
+        user.setBlockExpiry(java.time.LocalDateTime.now().plusDays(days > 0 ? days : 365));
+        chatSinginRepo.save(user);
+
+        // Update status to offline
+        try {
+            Optional<com.example.chatapplication.UserStatus> existingStatus = userStatusRepo.findById(email);
+            if (existingStatus.isPresent()) {
+                com.example.chatapplication.UserStatus status = existingStatus.get();
+                status.setIsOnline(false);
+                status.setLastSeen(java.time.LocalDateTime.now());
+                userStatusRepo.save(status);
+                java.util.Map<String, Object> statusMsg = new java.util.HashMap<>();
+                statusMsg.put("email", email);
+                statusMsg.put("online", false);
+                statusMsg.put("lastSeen", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                messagingTemplate.convertAndSend("/topic/status", (Object) statusMsg);
+            }
+        } catch (Exception e) {
+            // Ignore status notification errors
+        }
+        return true;
+    }
+
+    @Transactional
+    public boolean unblockUserByEmail(String email) {
+        Optional<ChatSingin> userOpt = chatSinginRepo.findByuseremail(email);
+        if (!userOpt.isPresent()) {
+            return false;
+        }
+        ChatSingin user = userOpt.get();
+        user.setIsBlocked(false);
+        user.setBlockExpiry(null);
+        chatSinginRepo.save(user);
+        return true;
     }
 }

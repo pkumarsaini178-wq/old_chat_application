@@ -79,4 +79,17 @@ public class JwtUntil {
         }
     }
 
+    public Date getTokenExpiration(String token) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(getsigineky())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody()
+                    .getExpiration();
+        } catch (Exception e) {
+            return new Date(System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000L);
+        }
+    }
+
 }

@@ -936,3 +936,227 @@ button:active {
     box-sizing: border-box;
 }
 
+/* Admin Control Panel Styles */
+.admin-modal-content {
+    background: var(--card-bg);
+    width: 90%;
+    max-width: 950px;
+    max-height: 85vh;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: fadeInUp 0.25s ease;
+}
+
+.admin-header {
+    padding: 20px 24px;
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.admin-header h2 {
+    font-size: 20px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-main);
+}
+
+.admin-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    padding: 20px 24px;
+    background: var(--bg-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.admin-stat-card {
+    background: var(--card-bg);
+    padding: 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.admin-stat-card .stat-val {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.admin-stat-card .stat-lbl {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.admin-body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.admin-search-bar {
+    margin-bottom: 16px;
+    display: flex;
+    gap: 12px;
+}
+
+.admin-search-bar input {
+    flex: 1;
+    height: 42px;
+    border-radius: var(--radius-sm);
+    padding: 0 16px;
+    border: 1px solid var(--border-color);
+    background: var(--input-bg);
+    color: var(--text-main);
+}
+
+.admin-users-table-container {
+    overflow-x: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+.admin-users-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 13px;
+}
+
+.admin-users-table th {
+    background: var(--bg-color);
+    padding: 12px 16px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.admin-users-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-main);
+    vertical-align: middle;
+}
+
+.admin-users-table tr:last-child td {
+    border-bottom: none;
+}
+
+.admin-users-table tr:hover td {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.role-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+.role-badge.admin {
+    background: rgba(108, 92, 231, 0.15);
+    color: var(--primary);
+}
+
+.role-badge.user {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-secondary);
+}
+
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.status-badge.active {
+    background: rgba(46, 204, 113, 0.15);
+    color: #27ae60;
+}
+
+.status-badge.blocked {
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+}
+
+.admin-action-btns {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.admin-btn-block {
+    background: rgba(241, 196, 15, 0.15);
+    color: #d35400;
+    border: none;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.admin-btn-block:hover {
+    background: #f39c12;
+    color: #fff;
+}
+
+.admin-btn-unblock {
+    background: rgba(46, 204, 113, 0.15);
+    color: #27ae60;
+    border: none;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.admin-btn-unblock:hover {
+    background: #2ecc71;
+    color: #fff;
+}
+
+.admin-btn-delete {
+    background: rgba(231, 76, 60, 0.15);
+    color: #c0392b;
+    border: none;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.admin-btn-delete:hover {
+    background: #e74c3c;
+    color: #fff;
+}
+
+.admin-btn-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+

@@ -9,4 +9,7 @@ public interface ChatRepository extends JpaRepository<ChatEntity, Long> {
     java.util.List<ChatEntity> findByConnectionIdOrderByTimestampAsc(Long connectionId);
 
     java.util.List<ChatEntity> findByConnectionIdOrderByTimestampDesc(Long connectionId, Pageable pageable);
+
+    void deleteByConnectionId(Long connectionId);
+    void deleteBySender(String sender);
 }
