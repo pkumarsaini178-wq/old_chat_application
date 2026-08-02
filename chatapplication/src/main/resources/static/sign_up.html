@@ -83,7 +83,14 @@
             errDiv.style.display = 'block';
         }
 
-        // Handle Signup Form via fetch to prevent Vercel 404 redirect issues
+        const getBackendUrl = () => {
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return 'http://localhost:8080';
+            }
+            return '';
+        };
+
+        // Handle Signup Form via fetch to prevent 404 redirect issues
         document.querySelector('form').addEventListener('submit', function(e) {
             e.preventDefault();
             const password = document.getElementById('password').value;
@@ -97,9 +104,10 @@
             }
 
             const formData = new FormData(this);
-            fetch('/siginpage', {
+            fetch(getBackendUrl() + '/siginpage', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'include'
             })
             .then(res => {
                 if (res.redirected) {

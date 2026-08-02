@@ -87,13 +87,21 @@
             document.getElementById("errorMessage").style.display = 'block';
         }
 
-        // Handle Login Form via fetch to prevent Vercel 404 redirect issues
+        const getBackendUrl = () => {
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return 'http://localhost:8080';
+            }
+            return '';
+        };
+
+        // Handle Login Form via fetch to prevent 404 redirect issues
         document.querySelector('form').addEventListener('submit', function(e) {
             e.preventDefault();
             const formData = new FormData(this);
-            fetch('/loginpage', {
+            fetch(getBackendUrl() + '/loginpage', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'include'
             })
             .then(res => {
                 if (res.redirected) {
