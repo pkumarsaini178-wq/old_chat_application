@@ -61,10 +61,15 @@ public class Chatservicefile {
         if (user.getUseremail() != null) {
             String cleanEmail = user.getUseremail().trim().toLowerCase();
             user.setUseremail(cleanEmail);
-            Optional<ChatSingin> existing = chatSinginRepo.findByuseremail(cleanEmail);
+            if (user.getUsername() != null) {
+                user.setUsername(user.getUsername().trim());
+            }
+            Optional<ChatSingin> existing = chatSinginRepo.findFirstByUseremailIgnoreCase(cleanEmail);
             if (existing.isPresent()) {
                 ChatSingin existingUser = existing.get();
-                existingUser.setUsername(user.getUsername());
+                if (user.getUsername() != null && !user.getUsername().isEmpty()) {
+                    existingUser.setUsername(user.getUsername().trim());
+                }
                 existingUser.setPassword(user.getPassword());
                 existingUser.setCurrentpassword(user.getCurrentpassword());
                 if (isAdminEmail(cleanEmail)) {
@@ -80,14 +85,21 @@ public class Chatservicefile {
     }
 
     public ChatSingin loginUser(String usernameOrEmail, String password) {
-        if (usernameOrEmail == null) return null;
+        if (usernameOrEmail == null || password == null) return null;
         String cleanInput = usernameOrEmail.trim().toLowerCase();
 
-        Optional<ChatSingin> user = chatSinginRepo.findByuseremail(cleanInput);
+        Optional<ChatSingin> user = chatSinginRepo.findFirstByUseremailIgnoreCase(cleanInput);
+        if (!user.isPresent()) {
+            user = chatSinginRepo.findFirstByUsernameIgnoreCase(usernameOrEmail.trim());
+        }
+        if (!user.isPresent()) {
+            user = chatSinginRepo.findByuseremail(cleanInput);
+        }
         if (!user.isPresent()) {
             user = chatSinginRepo.findByusername(usernameOrEmail.trim());
         }
-        if (user.isPresent() && passwordEncoder.matches(password, user.get().getPassword())) {
+
+        if (user.isPresent() && passwordEncoder.matches(password.trim(), user.get().getPassword())) {
             ChatSingin u = user.get();
             if (Boolean.TRUE.equals(u.getIsBlocked())) {
                 if (u.getBlockExpiry() != null && java.time.LocalDateTime.now().isAfter(u.getBlockExpiry())) {

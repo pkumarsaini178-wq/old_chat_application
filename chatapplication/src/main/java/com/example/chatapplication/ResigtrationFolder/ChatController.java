@@ -107,14 +107,19 @@ public class ChatController {
     public RedirectView singinString(@RequestParam String user_name, @RequestParam String user_email,
             @RequestParam String passowrd, @RequestParam String current_password) {
         if (user_email != null && user_name != null && passowrd != null && current_password != null) {
-            if (!passowrd.equals(current_password)) {
+            String cleanEmail = user_email.trim().toLowerCase();
+            String cleanName = user_name.trim();
+            String cleanPass = passowrd.trim();
+            String cleanConfirm = current_password.trim();
+
+            if (!cleanPass.equals(cleanConfirm)) {
                 return new RedirectView("/sign_up.html?error=" + "Passwords do not match");
             }
             ChatSingin datasave = new ChatSingin();
-            datasave.setUsername(user_name);
-            datasave.setUseremail(user_email);
-            datasave.setPassword(passwordEncoder.encode(passowrd));
-            datasave.setCurrentpassword(passwordEncoder.encode(current_password));
+            datasave.setUsername(cleanName);
+            datasave.setUseremail(cleanEmail);
+            datasave.setPassword(passwordEncoder.encode(cleanPass));
+            datasave.setCurrentpassword(passwordEncoder.encode(cleanConfirm));
             chatService.registerUser(datasave);
             return new RedirectView("/login.html");
         } else {
