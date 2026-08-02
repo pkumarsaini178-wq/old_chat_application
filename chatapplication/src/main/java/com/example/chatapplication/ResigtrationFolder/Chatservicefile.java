@@ -58,6 +58,21 @@ public class Chatservicefile {
     }
 
     public ChatSingin registerUser(ChatSingin user) {
+        if (user.getUseremail() != null) {
+            String cleanEmail = user.getUseremail().trim().toLowerCase();
+            user.setUseremail(cleanEmail);
+            Optional<ChatSingin> existing = chatSinginRepo.findByuseremail(cleanEmail);
+            if (existing.isPresent()) {
+                ChatSingin existingUser = existing.get();
+                existingUser.setUsername(user.getUsername());
+                existingUser.setPassword(user.getPassword());
+                existingUser.setCurrentpassword(user.getCurrentpassword());
+                if (isAdminEmail(cleanEmail)) {
+                    existingUser.setRole("ADMIN");
+                }
+                return chatSinginRepo.save(existingUser);
+            }
+        }
         if (isAdminEmail(user.getUseremail())) {
             user.setRole("ADMIN");
         }
@@ -65,9 +80,12 @@ public class Chatservicefile {
     }
 
     public ChatSingin loginUser(String usernameOrEmail, String password) {
-        Optional<ChatSingin> user = chatSinginRepo.findByuseremail(usernameOrEmail);
+        if (usernameOrEmail == null) return null;
+        String cleanInput = usernameOrEmail.trim().toLowerCase();
+
+        Optional<ChatSingin> user = chatSinginRepo.findByuseremail(cleanInput);
         if (!user.isPresent()) {
-            user = chatSinginRepo.findByusername(usernameOrEmail);
+            user = chatSinginRepo.findByusername(usernameOrEmail.trim());
         }
         if (user.isPresent() && passwordEncoder.matches(password, user.get().getPassword())) {
             ChatSingin u = user.get();

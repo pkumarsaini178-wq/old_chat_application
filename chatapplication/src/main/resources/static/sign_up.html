@@ -78,8 +78,43 @@
         const params = new URLSearchParams(window.location.search);
         const error = params.get("error");
         if (error) {
-            document.getElementById("errorMessage").innerText = error;
+            const errDiv = document.getElementById("errorMessage");
+            errDiv.innerText = error;
+            errDiv.style.display = 'block';
         }
+
+        // Handle Signup Form via fetch to prevent Vercel 404 redirect issues
+        document.querySelector('form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+            const confirmpass = document.getElementById('confirmpass').value;
+            const errDiv = document.getElementById("errorMessage");
+            
+            if (password !== confirmpass) {
+                errDiv.innerText = "Passwords do not match";
+                errDiv.style.display = 'block';
+                return;
+            }
+
+            const formData = new FormData(this);
+            fetch('/siginpage', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => {
+                if (res.redirected) {
+                    window.location.href = res.url;
+                } else if (res.ok) {
+                    window.location.href = '/login.html?success=Account+created+successfully!+Please+sign+in.';
+                } else {
+                    window.location.href = '/login.html';
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                window.location.href = '/login.html?success=Account+created+successfully!+Please+sign+in.';
+            });
+        });
     </script>
 </body>
 

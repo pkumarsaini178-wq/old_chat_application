@@ -39,7 +39,8 @@ public class AdminInitializer implements CommandLineRunner {
     }
 
     private void createOrUpdateAdmin(String email, String rawPassword, String defaultUsername) {
-        if (email == null || email.trim().isEmpty()) return;
+        if (email == null || email.trim().isEmpty())
+            return;
         String cleanEmail = email.trim().toLowerCase();
 
         Optional<ChatSingin> existingOpt = chatSinginRepo.findByuseremail(cleanEmail);
@@ -48,8 +49,11 @@ public class AdminInitializer implements CommandLineRunner {
             adminUser.setRole("ADMIN");
             adminUser.setIsBlocked(false);
             adminUser.setBlockExpiry(null);
-            adminUser.setPassword(passwordEncoder.encode(rawPassword));
-            adminUser.setCurrentpassword(passwordEncoder.encode(rawPassword));
+            // Only set default admin password if password is missing
+            if (adminUser.getPassword() == null || adminUser.getPassword().trim().isEmpty()) {
+                adminUser.setPassword(passwordEncoder.encode(rawPassword));
+                adminUser.setCurrentpassword(passwordEncoder.encode(rawPassword));
+            }
             chatSinginRepo.save(adminUser);
         } else {
             ChatSingin newAdmin = new ChatSingin();
