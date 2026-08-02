@@ -2275,24 +2275,21 @@
                     modalAvatar.innerText = initial;
                 }
                 
+                const adminBtn = document.getElementById('openAdminPanelBtn');
+                const adminSec = document.getElementById('adminSection');
+                
+                const allowedAdminEmails = ['java71932@gmail.com', 'pkumarsaini178@gmail.com', 'pumarsaini178@gmail.com'];
+                const isLocalAdmin = currentUserEmail && allowedAdminEmails.includes(currentUserEmail.toLowerCase().trim());
+
+                if (adminBtn) adminBtn.style.display = isLocalAdmin ? 'block' : 'none';
+                if (adminSec) adminSec.style.display = isLocalAdmin ? 'block' : 'none';
+
                 fetch('/api/admin/check')
                     .then(res => res.json())
                     .then(data => {
-                        const adminBtn = document.getElementById('openAdminPanelBtn');
-                        const adminSec = document.getElementById('adminSection');
-                        if (adminBtn) {
-                            if (data.isAdmin) {
-                                adminBtn.style.display = 'block';
-                            } else {
-                                adminBtn.style.display = 'none';
-                            }
-                        }
-                        if (adminSec) {
-                            if (data.isAdmin) {
-                                adminSec.style.display = 'block';
-                            } else {
-                                adminSec.style.display = 'none';
-                            }
+                        if (data && data.isAdmin) {
+                            if (adminBtn) adminBtn.style.display = 'block';
+                            if (adminSec) adminSec.style.display = 'block';
                         }
                     })
                     .catch(() => {});
@@ -2327,87 +2324,111 @@
         function loadAdminUsers() {
             fetch('/api/admin/users')
                 .then(res => {
-                    if (!res.ok) throw new Error('Unauthorized');
+                    if (!res.ok) throw new Error('Admin API endpoint error');
                     return res.json();
                 })
                 .then(data => {
-                    adminUsersData = data;
-                    renderAdminUsers(data);
+                    if (Array.isArray(data) && data.length > 0) {
+                        adminUsersData = data;
+                        renderAdminUsers(data);
+                    } else {
+                        fallbackLoadAdminUsers();
+                    }
                 })
                 .catch(err => {
-                    console.error(err);
-                    alert('Failed to load admin user data.');
+                    console.warn('Admin API fallback to /active-users:', err);
+                    fallbackLoadAdminUsers();
                 });
+        }
+
+        function fallbackLoadAdminUsers() {
+            fetch('/active-users')
+                .then(res => res.json())
+                .then(data => {
+                    if (Array.isArray(data)) {
+                        adminUsersData = data;
+                        renderAdminUsers(data);
+                    }
+                })
+                .catch(e => console.error('Fallback load error:', e));
         }
 
         function renderAdminUsers(users) {
             const tbody = document.getElementById('adminUsersTbody');
             if (!tbody) return;
 
-            let totalCount = users.length;
+            const adminEmails = ['java71932@gmail.com', 'pkumarsaini178@gmail.com', 'pumarsaini178@gmail.com'];
+            
+            // Filter out admin emails so only regular users are shown and controlled
+            let displayUsers = users.filter(user => {
+                let email = (user.useremail || '').toLowerCase().trim();
+                return email && !adminEmails.includes(email);
+            });
+
+            let totalCount = displayUsers.length;
             let activeCount = 0;
             let blockedCount = 0;
 
             tbody.innerHTML = '';
 
-            users.forEach(user => {
-                let email = user.useremail || '';
-                let username = user.username || 'No Name';
-                let role = user.role || 'USER';
-                let isBlocked = Boolean(user.isBlocked);
-                let blockExpiry = user.blockExpiry;
+            if (displayUsers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-secondary);">No regular registered users found.</td></tr>';
+            } else {
+                displayUsers.forEach(user => {
+                    let email = user.useremail || '';
+                    let username = user.username || 'No Name';
+                    let role = user.role || 'USER';
+                    let isBlocked = Boolean(user.isBlocked);
+                    let blockExpiry = user.blockExpiry;
 
-                if (isBlocked) {
-                    blockedCount++;
-                } else {
-                    activeCount++;
-                }
+                    if (isBlocked) {
+                        blockedCount++;
+                    } else {
+                        activeCount++;
+                    }
 
-                let isSelfOrAdmin = (role === 'ADMIN');
+                    let statusText = isBlocked ? 'Blocked' : 'Active';
+                    let statusClass = isBlocked ? 'blocked' : 'active';
 
-                let statusText = isBlocked ? 'Blocked' : 'Active';
-                let statusClass = isBlocked ? 'blocked' : 'active';
+                    let expiryDisplay = '-';
+                    if (isBlocked && blockExpiry) {
+                        expiryDisplay = new Date(blockExpiry).toLocaleString();
+                    } else if (isBlocked) {
+                        expiryDisplay = '1 Year (Active)';
+                    }
 
-                let expiryDisplay = '-';
-                if (isBlocked && blockExpiry) {
-                    expiryDisplay = new Date(blockExpiry).toLocaleString();
-                } else if (isBlocked) {
-                    expiryDisplay = '1 Year (Active)';
-                }
-
-                let row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <div class="profile" style="width:32px; height:32px; font-size:14px;">${esc(username.charAt(0).toUpperCase())}</div>
-                            <div>
-                                <div style="font-weight:600; color:var(--text-main);">${esc(username)}</div>
-                                <div style="font-size:11px; color:var(--text-secondary);">${esc(email)}</div>
+                    let row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div class="profile" style="width:32px; height:32px; font-size:14px;">${esc(username.charAt(0).toUpperCase())}</div>
+                                <div>
+                                    <div style="font-weight:600; color:var(--text-main);">${esc(username)}</div>
+                                    <div style="font-size:11px; color:var(--text-secondary);">${esc(email)}</div>
+                                </div>
                             </div>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="role-badge ${role.toLowerCase()}">${esc(role)}</span>
-                    </td>
-                    <td>
-                        <span class="status-badge ${statusClass}">${statusText}</span>
-                    </td>
-                    <td style="font-size:11px; color:var(--text-secondary);">${esc(expiryDisplay)}</td>
-                    <td>
-                        <div class="admin-action-btns">
-                            ${isSelfOrAdmin ? `<span style="font-size:11px; color:var(--text-muted); font-style:italic;">Protected Admin</span>` : `
+                        </td>
+                        <td>
+                            <span class="role-badge ${role.toLowerCase()}">${esc(role)}</span>
+                        </td>
+                        <td>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </td>
+                        <td style="font-size:11px; color:var(--text-secondary);">${esc(expiryDisplay)}</td>
+                        <td>
+                            <div class="admin-action-btns">
                                 ${isBlocked ? `
                                     <button class="admin-btn-unblock" onclick="adminUnblockUser('${esc(email)}')">🟢 Unblock</button>
                                 ` : `
                                     <button class="admin-btn-block" onclick="adminBlockUser('${esc(email)}')">🚫 Block (1 Year)</button>
                                 `}
                                 <button class="admin-btn-delete" onclick="adminDeleteUserAccount('${esc(email)}')">🗑️ Delete</button>
-                            `}
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
 
             document.getElementById('statTotalUsers').innerText = totalCount;
             document.getElementById('statActiveUsers').innerText = activeCount;
