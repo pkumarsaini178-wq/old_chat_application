@@ -84,19 +84,13 @@ public class Chatservicefile {
         return chatSinginRepo.save(user);
     }
 
-    public ChatSingin loginUser(String usernameOrEmail, String password) {
-        if (usernameOrEmail == null || password == null) return null;
-        String cleanInput = usernameOrEmail.trim().toLowerCase();
+    public ChatSingin loginUser(String userEmail, String password) {
+        if (userEmail == null || password == null) return null;
+        String cleanEmail = userEmail.trim().toLowerCase();
 
-        Optional<ChatSingin> user = chatSinginRepo.findFirstByUseremailIgnoreCase(cleanInput);
+        Optional<ChatSingin> user = chatSinginRepo.findFirstByUseremailIgnoreCase(cleanEmail);
         if (!user.isPresent()) {
-            user = chatSinginRepo.findFirstByUsernameIgnoreCase(usernameOrEmail.trim());
-        }
-        if (!user.isPresent()) {
-            user = chatSinginRepo.findByuseremail(cleanInput);
-        }
-        if (!user.isPresent()) {
-            user = chatSinginRepo.findByusername(usernameOrEmail.trim());
+            user = chatSinginRepo.findByuseremail(cleanEmail);
         }
 
         if (user.isPresent() && passwordEncoder.matches(password.trim(), user.get().getPassword())) {

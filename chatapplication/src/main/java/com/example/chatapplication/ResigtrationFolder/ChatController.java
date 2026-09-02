@@ -66,17 +66,18 @@ public class ChatController {
     }
 
     @PostMapping("/loginpage")
-    public RedirectView loginString(@RequestParam String user_name, @RequestParam String passowrd,
+    public RedirectView loginString(
+            @RequestParam(value = "user_email", required = false) String user_email,
+            @RequestParam(value = "user_name", required = false) String user_name,
+            @RequestParam String passowrd,
             HttpServletResponse response) {
-        if (user_name != null && passowrd != null) {
+        String inputEmail = (user_email != null && !user_email.trim().isEmpty()) ? user_email : user_name;
+        if (inputEmail != null && passowrd != null) {
             try {
-                ChatSingin chatuser = chatService.loginUser(user_name, passowrd);
+                ChatSingin chatuser = chatService.loginUser(inputEmail, passowrd);
                 if (chatuser != null) {
-                    // Generate JWT token based on user email (or username as fallback)
+                    // Generate JWT token based on user email
                     String emailForToken = chatuser.getUseremail();
-                    if (emailForToken == null || emailForToken.isEmpty()) {
-                        emailForToken = chatuser.getUsername();
-                    }
                     String token = jwtUntil.gunrateToken(emailForToken);
 
                     // Create cookie to store the JWT token for 1 week
@@ -100,7 +101,7 @@ public class ChatController {
                 }
             }
         }
-        return new RedirectView("/login.html?error=" + "Username or password is not valid");
+        return new RedirectView("/login.html?error=" + "Email or password is not valid");
     }
 
     @PostMapping("/siginpage")

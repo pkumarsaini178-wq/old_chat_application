@@ -115,12 +115,16 @@
                 } else if (res.ok) {
                     window.location.href = '/login.html?success=Account+created+successfully!+Please+sign+in.';
                 } else {
-                    window.location.href = '/login.html';
+                    const errDiv = document.getElementById("errorMessage");
+                    errDiv.innerText = 'Signup failed. Please try again.';
+                    errDiv.style.display = 'block';
                 }
             })
             .catch(err => {
-                console.error(err);
-                window.location.href = '/login.html?success=Account+created+successfully!+Please+sign+in.';
+                console.error('Signup error:', err);
+                const errDiv = document.getElementById("errorMessage");
+                errDiv.innerText = 'Unable to connect to server. Please try again.';
+                errDiv.style.display = 'block';
             });
         });
     </script>
