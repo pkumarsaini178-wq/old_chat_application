@@ -105,26 +105,37 @@ public class ChatController {
     }
 
     @PostMapping("/siginpage")
-    public RedirectView singinString(@RequestParam String user_name, @RequestParam String user_email,
-            @RequestParam String passowrd, @RequestParam String current_password) {
+    public RedirectView singinString(
+            @RequestParam(value = "user_name", required = false) String user_name,
+            @RequestParam(value = "user_email", required = false) String user_email,
+            @RequestParam(value = "passowrd", required = false) String passowrd,
+            @RequestParam(value = "current_password", required = false) String current_password) {
         if (user_email != null && user_name != null && passowrd != null && current_password != null) {
             String cleanEmail = user_email.trim().toLowerCase();
             String cleanName = user_name.trim();
             String cleanPass = passowrd.trim();
             String cleanConfirm = current_password.trim();
 
-            if (!cleanPass.equals(cleanConfirm)) {
-                return new RedirectView("/sign_up.html?error=" + "Passwords do not match");
+            if (cleanEmail.isEmpty() || cleanName.isEmpty() || cleanPass.isEmpty()) {
+                return new RedirectView("/sign_up.html?error=All+fields+are+required");
             }
-            ChatSingin datasave = new ChatSingin();
-            datasave.setUsername(cleanName);
-            datasave.setUseremail(cleanEmail);
-            datasave.setPassword(passwordEncoder.encode(cleanPass));
-            datasave.setCurrentpassword(passwordEncoder.encode(cleanConfirm));
-            chatService.registerUser(datasave);
-            return new RedirectView("/login.html");
+
+            if (!cleanPass.equals(cleanConfirm)) {
+                return new RedirectView("/sign_up.html?error=Passwords+do+not+match");
+            }
+            try {
+                ChatSingin datasave = new ChatSingin();
+                datasave.setUsername(cleanName);
+                datasave.setUseremail(cleanEmail);
+                datasave.setPassword(passwordEncoder.encode(cleanPass));
+                datasave.setCurrentpassword(passwordEncoder.encode(cleanConfirm));
+                chatService.registerUser(datasave);
+                return new RedirectView("/login.html");
+            } catch (Exception e) {
+                return new RedirectView("/sign_up.html?error=Registration+failed.+Please+try+again.");
+            }
         } else {
-            return new RedirectView("/sign_up.html?error=" + "All fields are required");
+            return new RedirectView("/sign_up.html?error=All+fields+are+required");
         }
     }
 

@@ -15,6 +15,26 @@ public class ChatapplicationApplication {
 		System.setProperty("spring.output.ansi.enabled", "never");
 		System.setProperty("spring.main.banner-mode", "off");
 		System.setProperty("org.springframework.boot.logging.LoggingSystem", "none");
+
+		// Clean up old static folder files if present
+		try {
+			java.io.File[] staticDirs = new java.io.File[] {
+				new java.io.File("src/main/resources/static"),
+				new java.io.File("chatapplication/src/main/resources/static")
+			};
+			for (java.io.File dir : staticDirs) {
+				if (dir.exists() && dir.isDirectory()) {
+					java.io.File[] files = dir.listFiles();
+					if (files != null) {
+						for (java.io.File f : files) {
+							if (f.isFile()) {
+								f.delete();
+							}
+						}
+					}
+				}
+			}
+		} catch (Exception e) {}
 	}
 
 	public static void main(String[] args) {
