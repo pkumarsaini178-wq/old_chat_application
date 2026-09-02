@@ -132,7 +132,10 @@ public class ChatController {
                 chatService.registerUser(datasave);
                 return new RedirectView("/login.html");
             } catch (Exception e) {
-                return new RedirectView("/sign_up.html?error=Registration+failed.+Please+try+again.");
+                String errorDetails = (e.getMessage() != null && !e.getMessage().isEmpty()) 
+                        ? e.getMessage() 
+                        : ("Registration failed (" + e.getClass().getSimpleName() + ")");
+                return new RedirectView("/sign_up.html?error=" + java.net.URLEncoder.encode(errorDetails, java.nio.charset.StandardCharsets.UTF_8));
             }
         } else {
             return new RedirectView("/sign_up.html?error=All+fields+are+required");
