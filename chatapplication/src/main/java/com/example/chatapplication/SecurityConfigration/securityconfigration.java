@@ -53,8 +53,8 @@ public class securityconfigration {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/login.html", "/sign_up.html", "/loginpage", "/siginpage",
                                 "/homepage.html", "/forgetpassword", "/send-otp", "/verify-otp", "/setpassword",
-                                "/forgetpassword.html", "/verify-otp.html", "/setpassword.html",
-                                "/*.css", "/*.js", "/error", "/ws/**", "/logout")
+                                "/forgetpassword.html", "/verify-otp.html", "/setpassword.html", "/night_mode_demo.html",
+                                "/*.css", "/*.js", "/*.jsx", "/*.json", "/config.json", "/error", "/ws/**", "/logout")
                         .permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
