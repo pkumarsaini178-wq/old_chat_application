@@ -66,41 +66,49 @@ public class ChatController {
     }
 
     @PostMapping("/loginpage")
-    public RedirectView loginString(
+    @ResponseBody
+    public java.util.Map<String, String> loginString(
             @RequestParam(value = "user_email", required = false) String user_email,
-            @RequestParam String passowrd,
+            @RequestParam(value = "user_name", required = false) String user_name,
+            @RequestParam(value = "passowrd", required = false) String passowrd,
             HttpServletResponse response) {
-        String inputEmail = user_email.trim();
+        java.util.Map<String, String> result = new java.util.HashMap<>();
+        String inputEmail = (user_email != null && !user_email.trim().isEmpty()) ? user_email.trim() : (user_name != null ? user_name.trim() : null);
+
         if (inputEmail != null && passowrd != null) {
             try {
                 ChatSingin chatuser = chatService.loginUser(inputEmail, passowrd);
                 if (chatuser != null) {
-                    // Generate JWT token based on user email
                     String emailForToken = chatuser.getUseremail();
                     String token = jwtUntil.gunrateToken(emailForToken);
 
-                    // Create cookie to store the JWT token for 1 week
                     Cookie cookie = new Cookie("jwt", token);
-                    cookie.setHttpOnly(true); // secure against XSS
-                    cookie.setSecure(true);   // only sent over HTTPS
-                    cookie.setPath("/");      // available across the entire application
-                    cookie.setMaxAge(7 * 24 * 60 * 60); // 1 week expiry in seconds
-                    // Set SameSite=None via Set-Cookie header for cross-origin support
+                    cookie.setHttpOnly(true);
+                    cookie.setSecure(true);
+                    cookie.setPath("/");
+                    cookie.setMaxAge(7 * 24 * 60 * 60);
                     String setCookieHeader = cookie.getName() + "=" + cookie.getValue()
                             + "; Path=" + cookie.getPath()
                             + "; Max-Age=" + cookie.getMaxAge()
                             + "; HttpOnly; Secure; SameSite=None";
                     response.addHeader("Set-Cookie", setCookieHeader);
 
-                    return new RedirectView("/homepage.html");
+                    result.put("status", "SUCCESS");
+                    result.put("token", token);
+                    result.put("redirect", "/homepage.html");
+                    return result;
                 }
             } catch (RuntimeException e) {
                 if ("ACCOUNT_BLOCKED".equals(e.getMessage())) {
-                    return new RedirectView("/login.html?error=" + "Your account has been blocked by the admin.");
+                    result.put("status", "ERROR");
+                    result.put("message", "Your account has been blocked by the admin.");
+                    return result;
                 }
             }
         }
-        return new RedirectView("/login.html?error=" + "Email or password is not valid");
+        result.put("status", "ERROR");
+        result.put("message", "Invalid email or password");
+        return result;
     }
 
     @PostMapping("/siginpage")
