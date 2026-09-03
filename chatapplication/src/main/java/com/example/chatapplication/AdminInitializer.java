@@ -26,16 +26,16 @@ public class AdminInitializer implements CommandLineRunner {
     @Value("${admin.user1.password:2215795455#@$}")
     private String admin1Password;
 
-    @Value("${admin.user2.email:pkumarsaini178@gmail.com}")
-    private String admin2Email;
-
-    @Value("${admin.user2.password:2215795455#@$}")
-    private String admin2Password;
-
     @Override
     public void run(String... args) throws Exception {
-        createOrUpdateAdmin(admin1Email, admin1Password, "java71932");
-        createOrUpdateAdmin(admin2Email, admin2Password, "pkumarsaini178");
+        // Ensure ONLY java71932@gmail.com is the Single Admin
+        createOrUpdateAdmin(admin1Email, admin1Password, "pankaj");
+
+        // Completely delete default user pkumarsaini178@gmail.com from the database
+        Optional<ChatSingin> oldAdmin2 = chatSinginRepo.findByuseremail("pkumarsaini178@gmail.com");
+        if (oldAdmin2.isPresent()) {
+            chatSinginRepo.delete(oldAdmin2.get());
+        }
     }
 
     private void createOrUpdateAdmin(String email, String rawPassword, String defaultUsername) {
