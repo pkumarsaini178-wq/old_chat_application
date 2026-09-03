@@ -104,40 +104,51 @@ public class ChatController {
     }
 
     @PostMapping("/siginpage")
-    public RedirectView singinString(
+    @ResponseBody
+    public java.util.Map<String, String> singinString(
             @RequestParam(value = "user_name", required = false) String user_name,
             @RequestParam(value = "user_email", required = false) String user_email,
             @RequestParam(value = "passowrd", required = false) String passowrd,
             @RequestParam(value = "current_password", required = false) String current_password) {
-        if (user_email != null && user_name != null && passowrd != null && current_password != null) {
-            String cleanEmail = user_email.trim().toLowerCase();
-            String cleanName = user_name.trim();
-            String cleanPass = passowrd.trim();
-            String cleanConfirm = current_password.trim();
+        java.util.Map<String, String> result = new java.util.HashMap<>();
+        
+        if (user_email == null || user_name == null || passowrd == null || current_password == null ||
+            user_email.trim().isEmpty() || user_name.trim().isEmpty() || passowrd.trim().isEmpty()) {
+            result.put("status", "ERROR");
+            result.put("message", "All fields are required");
+            return result;
+        }
 
-            if (cleanEmail.isEmpty() || cleanName.isEmpty() || cleanPass.isEmpty()) {
-                return new RedirectView("/sign_up.html?error=All+fields+are+required");
-            }
+        String cleanEmail = user_email.trim().toLowerCase();
+        String cleanName = user_name.trim();
+        String cleanPass = passowrd.trim();
+        String cleanConfirm = current_password.trim();
 
-            if (!cleanPass.equals(cleanConfirm)) {
-                return new RedirectView("/sign_up.html?error=Passwords+do+not+match");
-            }
-            try {
-                ChatSingin datasave = new ChatSingin();
-                datasave.setUsername(cleanName);
-                datasave.setUseremail(cleanEmail);
-                datasave.setPassword(passwordEncoder.encode(cleanPass));
-                datasave.setCurrentpassword(passwordEncoder.encode(cleanConfirm));
-                chatService.registerUser(datasave);
-                return new RedirectView("/login.html");
-            } catch (Exception e) {
-                String errorDetails = (e.getMessage() != null && !e.getMessage().isEmpty()) 
-                        ? e.getMessage() 
-                        : ("Registration failed (" + e.getClass().getSimpleName() + ")");
-                return new RedirectView("/sign_up.html?error=" + java.net.URLEncoder.encode(errorDetails, java.nio.charset.StandardCharsets.UTF_8));
-            }
-        } else {
-            return new RedirectView("/sign_up.html?error=All+fields+are+required");
+        if (!cleanPass.equals(cleanConfirm)) {
+            result.put("status", "ERROR");
+            result.put("message", "Passwords do not match");
+            return result;
+        }
+
+        try {
+            ChatSingin datasave = new ChatSingin();
+            datasave.setUsername(cleanName);
+            datasave.setUseremail(cleanEmail);
+            datasave.setPassword(passwordEncoder.encode(cleanPass));
+            datasave.setCurrentpassword(passwordEncoder.encode(cleanConfirm));
+            chatService.registerUser(datasave);
+            
+            result.put("status", "SUCCESS");
+            result.put("message", "Account created successfully! Please sign in.");
+            result.put("redirect", "/login.html");
+            return result;
+        } catch (Exception e) {
+            String errorDetails = (e.getMessage() != null && !e.getMessage().isEmpty()) 
+                    ? e.getMessage() 
+                    : ("Registration failed (" + e.getClass().getSimpleName() + ")");
+            result.put("status", "ERROR");
+            result.put("message", errorDetails);
+            return result;
         }
     }
 
