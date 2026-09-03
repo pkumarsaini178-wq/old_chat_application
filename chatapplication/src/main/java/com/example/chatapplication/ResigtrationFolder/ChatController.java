@@ -68,10 +68,9 @@ public class ChatController {
     @PostMapping("/loginpage")
     public RedirectView loginString(
             @RequestParam(value = "user_email", required = false) String user_email,
-            @RequestParam(value = "user_name", required = false) String user_name,
             @RequestParam String passowrd,
             HttpServletResponse response) {
-        String inputEmail = (user_email != null && !user_email.trim().isEmpty()) ? user_email : user_name;
+        String inputEmail = user_email.trim();
         if (inputEmail != null && passowrd != null) {
             try {
                 ChatSingin chatuser = chatService.loginUser(inputEmail, passowrd);
@@ -566,21 +565,24 @@ public class ChatController {
 
     @GetMapping("/api/user/status/batch")
     @ResponseBody
-    public java.util.Map<String, Object> getBatchUserStatus(@RequestParam List<String> emails) {
+    public java.util.Map<String, Object> getBatchUserStatus(@RequestParam(required = false) List<String> emails) {
         java.util.Map<String, Object> result = new java.util.HashMap<>();
-        for (String email : emails) {
-            java.util.Optional<com.example.chatapplication.UserStatus> status = userStatusRepo.findById(email);
-            java.util.Map<String, Object> userStatus = new java.util.HashMap<>();
-            if (status.isPresent()) {
-                userStatus.put("isOnline", status.get().getIsOnline());
-                userStatus.put("lastSeen", status.get().getLastSeen() != null
-                        ? status.get().getLastSeen().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                        : null);
-            } else {
-                userStatus.put("isOnline", false);
-                userStatus.put("lastSeen", null);
+        if (emails != null) {
+            for (String email : emails) {
+                if (email == null || email.trim().isEmpty()) continue;
+                java.util.Optional<com.example.chatapplication.UserStatus> status = userStatusRepo.findById(email);
+                java.util.Map<String, Object> userStatus = new java.util.HashMap<>();
+                if (status.isPresent()) {
+                    userStatus.put("isOnline", status.get().getIsOnline());
+                    userStatus.put("lastSeen", status.get().getLastSeen() != null
+                            ? status.get().getLastSeen().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                            : null);
+                } else {
+                    userStatus.put("isOnline", false);
+                    userStatus.put("lastSeen", null);
+                }
+                result.put(email, userStatus);
             }
-            result.put(email, userStatus);
         }
         return result;
     }
