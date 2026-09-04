@@ -39,20 +39,26 @@ public class JwtFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain chain ) throws jakarta.servlet.ServletException, java.io.IOException
                                     {
-                                        String token=null;
-                                        Cookie[] cookies=request.getCookies();
-                                        if(cookies!=null)
-                                        {
-                                            for(Cookie cookie: cookies)
-                                            {
-                                                if("jwt".equals(cookie.getName()))
-                                                {
-                                                    token=cookie.getValue();
+                                        String token = null;
+                                        Cookie[] cookies = request.getCookies();
+                                        if (cookies != null) {
+                                            for (Cookie cookie : cookies) {
+                                                if ("jwt".equals(cookie.getName())) {
+                                                    token = cookie.getValue();
                                                     break;
                                                 }
                                             }
                                         }
-                                         if(token!=null)
+
+                                        // Fallback to Authorization Header if Cookie is missing
+                                        if (token == null || token.trim().isEmpty()) {
+                                            String authHeader = request.getHeader("Authorization");
+                                            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                                                token = authHeader.substring(7).trim();
+                                            }
+                                        }
+
+                                        if (token != null && !token.trim().isEmpty())
                                          {
                                              if(jwtUntil.Token_is_vailid(token) && !tokenBlacklistService.isTokenBlacklisted(token))
                                              {
