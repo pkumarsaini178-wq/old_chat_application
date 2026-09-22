@@ -352,10 +352,10 @@ public class ChatController {
 
     @GetMapping("/api/friends")
     @ResponseBody
-    public List<com.example.chatapplication.ChatConnection> getFriends() {
+    public List<com.example.chatapplication.FriendDto> getFriends() {
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         String currentEmail = auth.getName();
-        return chatService.getFriends(currentEmail);
+        return chatService.getFriendDtos(currentEmail);
     }
 
     @Autowired

@@ -166,10 +166,12 @@ public class Chatservicefile {
             notif.setStatus("ACCEPTED");
             notificationRepo.save(notif);
 
-            com.example.chatapplication.ChatConnection connection = new com.example.chatapplication.ChatConnection();
-            connection.setUser1Email(notif.getSenderEmail());
-            connection.setUser2Email(notif.getReceiverEmail());
-            chatConnectionRepo.save(connection);
+            if (!chatConnectionRepo.connectionExists(notif.getSenderEmail(), notif.getReceiverEmail())) {
+                com.example.chatapplication.ChatConnection connection = new com.example.chatapplication.ChatConnection();
+                connection.setUser1Email(notif.getSenderEmail());
+                connection.setUser2Email(notif.getReceiverEmail());
+                chatConnectionRepo.save(connection);
+            }
 
             java.util.Map<String, Object> notifMsg = new java.util.HashMap<>();
             notifMsg.put("type", "REQUEST_ACCEPTED");
@@ -196,6 +198,78 @@ public class Chatservicefile {
 
     public List<com.example.chatapplication.ChatConnection> getFriends(String email) {
         return chatConnectionRepo.findByUser1EmailOrUser2Email(email, email);
+    }
+
+    public List<com.example.chatapplication.FriendDto> getFriendDtos(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+        String cleanCurrentEmail = email.trim().toLowerCase();
+        List<com.example.chatapplication.ChatConnection> connections = chatConnectionRepo.findByUser1EmailOrUser2Email(cleanCurrentEmail, cleanCurrentEmail);
+        if (connections.isEmpty() && !cleanCurrentEmail.equals(email)) {
+            connections = chatConnectionRepo.findByUser1EmailOrUser2Email(email, email);
+        }
+
+        java.util.Map<String, com.example.chatapplication.FriendDto> uniqueFriends = new java.util.LinkedHashMap<>();
+
+        for (com.example.chatapplication.ChatConnection conn : connections) {
+            String u1 = conn.getUser1Email() != null ? conn.getUser1Email().trim() : "";
+            String u2 = conn.getUser2Email() != null ? conn.getUser2Email().trim() : "";
+            String friendEmail = u1.equalsIgnoreCase(cleanCurrentEmail) ? u2 : u1;
+            if (friendEmail.isEmpty()) continue;
+
+            String friendEmailClean = friendEmail.toLowerCase();
+            Optional<ChatSingin> friendOpt = chatSinginRepo.findFirstByUseremailIgnoreCase(friendEmailClean);
+            if (!friendOpt.isPresent()) {
+                friendOpt = chatSinginRepo.findByuseremail(friendEmail);
+            }
+            if (!friendOpt.isPresent()) {
+                // If friendEmail was without @domain, try matching username
+                friendOpt = chatSinginRepo.findByusername(friendEmail);
+            }
+
+            String friendName;
+            String uniqueKey;
+
+            if (friendOpt.isPresent()) {
+                ChatSingin friendUser = friendOpt.get();
+                friendName = (friendUser.getUsername() != null && !friendUser.getUsername().trim().isEmpty())
+                        ? friendUser.getUsername().trim()
+                        : friendEmail.split("@")[0];
+                uniqueKey = friendUser.getUseremail() != null ? friendUser.getUseremail().toLowerCase().trim() : friendEmailClean;
+            } else {
+                friendName = friendEmail.contains("@") ? friendEmail.split("@")[0] : friendEmail;
+                uniqueKey = friendEmailClean;
+            }
+
+            if (uniqueFriends.containsKey(uniqueKey)) {
+                continue; // Skip duplicate friend entry
+            }
+
+            boolean isOnline = false;
+            String lastSeen = null;
+            Optional<com.example.chatapplication.UserStatus> statusOpt = userStatusRepo.findById(friendEmail);
+            if (statusOpt.isPresent()) {
+                isOnline = Boolean.TRUE.equals(statusOpt.get().getIsOnline());
+                if (statusOpt.get().getLastSeen() != null) {
+                    lastSeen = statusOpt.get().getLastSeen().toString();
+                }
+            }
+
+            com.example.chatapplication.FriendDto dto = new com.example.chatapplication.FriendDto(
+                    conn.getId(),
+                    conn.getId(),
+                    conn.getUser1Email(),
+                    conn.getUser2Email(),
+                    friendEmail,
+                    friendName,
+                    isOnline,
+                    lastSeen
+            );
+            uniqueFriends.put(uniqueKey, dto);
+        }
+
+        return new java.util.ArrayList<>(uniqueFriends.values());
     }
 
     @Autowired
